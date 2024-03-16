@@ -95,17 +95,9 @@ namespace CopyTextInSolutionExplorer
                 string combinedText = "";
                 foreach (UIHierarchyItem selectedItem in items)
                 {
-                    // 파일 내용을 읽고 combinedText에 추가
-                    if (selectedItem.Object is ProjectItem projectItem && projectItem.Properties != null)
+                    if (selectedItem.Object is ProjectItem projectItem)
                     {
-                        string filePath = projectItem.FileNames[1];
-                        if (!string.IsNullOrEmpty(filePath) && System.IO.File.Exists(filePath))
-                        {
-                            // 파일 이름과 확장자를 추출
-                            string fileName = System.IO.Path.GetFileName(filePath);
-                            // 파일 내용을 읽어서 combinedText에 추가, 파일 이름과 확장자를 주석으로 포함
-                            combinedText += $"// {fileName}\n{System.IO.File.ReadAllText(filePath)}\n\n";
-                        }
+                        ProcessProjectItem(projectItem, ref combinedText);
                     }
                 }
 
@@ -113,7 +105,7 @@ namespace CopyTextInSolutionExplorer
                 Clipboard.SetText(combinedText);
 
                 // 상태 표시줄에 메시지 표시
-                dte.StatusBar.Text = "The contents of the file have been copied to the clipboard.";
+                dte.StatusBar.Text = "The contents of the file(s) have been copied to the clipboard.";
             }
             catch (Exception ex)
             {
@@ -126,5 +118,30 @@ namespace CopyTextInSolutionExplorer
                     OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
             }
         }
+
+        private void ProcessProjectItem(ProjectItem projectItem, ref string combinedText)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (projectItem.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFile)
+            {
+                // 파일 내용을 읽고 combinedText에 추가
+                string filePath = projectItem.FileNames[1];
+                if (!string.IsNullOrEmpty(filePath) && System.IO.File.Exists(filePath))
+                {
+                    string fileName = System.IO.Path.GetFileName(filePath);
+                    combinedText += $"// {fileName}\n{System.IO.File.ReadAllText(filePath)}\n\n";
+                }
+            }
+            else if (projectItem.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder)
+            {
+                // 폴더 내의 모든 파일 처리
+                foreach (ProjectItem subItem in projectItem.ProjectItems)
+                {
+                    ProcessProjectItem(subItem, ref combinedText);
+                }
+            }
+        }
+
     }
 }
