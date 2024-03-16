@@ -1,5 +1,7 @@
 # Copy Text of Selected Files
 
+<img src="https://raw.githubusercontent.com/iyulab-rnd/public/main/images/screenshot.png" width="430" />
+
 This extension for Visual Studio Code allows users to copy the contents of selected files directly to the clipboard, making it easier to manage and share code snippets or entire files quickly.
 
 ## Features
@@ -48,7 +50,3 @@ function greet() {
 2. Press `Ctrl+P` to open the Quick Open dialog
 3. Type `ext install copy-text-selected-files` to find the extension
 4. Click the Install button, then the Enable button
-
-## Requirements
-
-Visual Studio Code version 1.81.0 or higher.
