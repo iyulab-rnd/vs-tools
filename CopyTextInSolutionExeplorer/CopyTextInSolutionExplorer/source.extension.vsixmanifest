@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="CopyTextInSolutionExplorer.dae0e35a-90f4-4397-8548-08af93d0fd67" Version="1.1" Language="en-US" Publisher="iyulab" />
+        <Identity Id="CopyTextInSolutionExplorer.dae0e35a-90f4-4397-8548-08af93d0fd67" Version="1.2" Language="en-US" Publisher="iyulab" />
         <DisplayName>Copy Text In Solution Explorer</DisplayName>
         <Description xml:space="preserve">You can copy the contents of the selected files in Solution Explorer to the clipboard.</Description>
     </Metadata>

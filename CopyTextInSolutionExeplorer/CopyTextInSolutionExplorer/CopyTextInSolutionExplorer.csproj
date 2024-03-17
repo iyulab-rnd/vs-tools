@@ -54,6 +54,7 @@
   <ItemGroup>
     <Compile Include="CopyTextSelectedFilesCommand.cs" />
     <Compile Include="CopyTextSelectedFilesCommandPackage.cs" />
+    <Compile Include="LanguageExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

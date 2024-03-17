@@ -6,6 +6,8 @@ using Task = System.Threading.Tasks.Task;
 using EnvDTE;
 using EnvDTE80;
 using System.Windows.Forms;
+using CopyTextInSolutionExeplorer;
+using System.Linq;
 
 namespace CopyTextInSolutionExplorer
 {
@@ -119,18 +121,36 @@ namespace CopyTextInSolutionExplorer
             }
         }
 
+        private string MapFileExtensionToLanguage(string fileExtension)
+        {
+            var map = LanguageExtensions.GetMap();
+            // 파일 확장자를 기준으로 언어를 찾음
+
+            if (map.TryGetValue(fileExtension, out string language))
+                return language;
+            else
+                return "";
+        }
+
         private void ProcessProjectItem(ProjectItem projectItem, ref string combinedText)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
             if (projectItem.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFile)
             {
-                // 파일 내용을 읽고 combinedText에 추가
+                // 파일 경로를 가져옴
                 string filePath = projectItem.FileNames[1];
                 if (!string.IsNullOrEmpty(filePath) && System.IO.File.Exists(filePath))
                 {
                     string fileName = System.IO.Path.GetFileName(filePath);
-                    combinedText += $"// {fileName}\n{System.IO.File.ReadAllText(filePath)}\n\n";
+                    string fileExtension = System.IO.Path.GetExtension(fileName);
+                    // 확장자를 기준으로 언어를 매핑
+                    string markdownLanguage = MapFileExtensionToLanguage(fileExtension);
+
+                    // 마크다운 형식으로 파일 이름과 언어를 추가
+                    combinedText += $"### {fileName}\n\n```{markdownLanguage}\n";
+                    // 파일 내용을 읽고 combinedText에 추가
+                    combinedText += System.IO.File.ReadAllText(filePath) + "\n```\n\n";
                 }
             }
             else if (projectItem.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder)
@@ -142,6 +162,5 @@ namespace CopyTextInSolutionExplorer
                 }
             }
         }
-
     }
 }
