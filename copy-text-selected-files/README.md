@@ -2,51 +2,71 @@
 
 <img src="https://raw.githubusercontent.com/iyulab-rnd/public/main/images/screenshot.png" width="430" />
 
-This extension for Visual Studio Code allows users to copy the contents of selected files directly to the clipboard, making it easier to manage and share code snippets or entire files quickly.
+This Visual Studio Code extension enables users to directly copy the contents of selected files to the clipboard.
 
 ## Features
 
-- **Copy Single File**: Right-click on a file in the Explorer panel and select "Copy Content of Selected Files" to copy the entire content of the file to the clipboard.
-- **Copy Multiple Files**: Select multiple files in the Explorer panel, right-click on one of them, and select "Copy Content of Selected Files" to copy the contents of all selected files, each preceded by the file name and path.
-- **Copy Directory Contents**: Right-click on a directory in the Explorer panel and select "Copy Content of Selected Files" to copy the contents of all files within the directory, including those in subdirectories.
+- **Copy Single File**: Right-click a file in the Explorer panel and choose "Copy Content of Selected Files" to copy its contents to the clipboard.
+- **Copy Multiple Files**: Select multiple files, right-click on one, and select "Copy Content of Selected Files" to copy their contents. Each content is preceded by its file name and path.
+- **Copy Directory Contents**: Right-click on a directory and choose "Copy Content of Selected Files" to copy the contents of all files within, including subdirectories.
 
 ## Usage
 
-To use this extension, navigate to the Explorer view in Visual Studio Code, select one or more files or a directory, right-click, and choose "Copy Content of Selected Files". The content of the selected files or all files within the selected directory will be copied to the clipboard, ready to be pasted wherever you need.
+In Visual Studio Code, go to the Explorer view, select one or more files or a directory, right-click, and select "Copy Content of Selected Files".
 
 ## Example
 
 Consider you have the following files:
 
-`hello.txt`
+`index.html`
 
+```html
+<!DOCTYPE html>
+<html lang="en">
+  ...
+</html>
 ```
-Hello, world!
-```
 
-`greet.js`
+`src\global.scss`
 
-```javascript
-function greet() {
-  console.log("Hello, world!");
+```scss
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
 }
 ```
 
 Selecting both files and using the "Copy Content of Selected Files" command, the clipboard will contain:
 
-```javascript
-// hello.txt
-Hello, world!
+````
+### index.html
 
-// greet.js
-function greet() {
-  console.log("Hello, world!");
+```html
+<!DOCTYPE html>
+<html lang="en">
+<body>
+<h1>hello world</h1>
+</body>
+</html>
+```
+
+### src\global.scss
+
+```scss
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
 }
 ```
+````
 
 ## Installation
 
-1. Open Visual Studio Code
-2. Press `Ctrl+P` to open the Quick Open dialog
-3. Type `ext install copy-text-selected-files` to find the extension
-4. Click the Install button, then the Enable button
+1. Open Visual Studio Code.
+2. Press `Ctrl+P` to open the Quick Open dialog.
+3. Type `ext install copy-text-selected-files` and search for the extension.
+4. Click on Install and then on Enable.
