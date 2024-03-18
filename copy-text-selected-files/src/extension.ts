@@ -62,33 +62,16 @@ export function activate(context: vscode.ExtensionContext) {
     async (fileUri?: vscode.Uri, selectedFiles?: vscode.Uri[]) => {
       let aggregatedContent = "";
 
-      // 사용자가 단축키를 사용해 명령을 실행했을 때 현재 활성 파일 또는 선택된 파일들 처리
-      if (!fileUri && vscode.window.activeTextEditor) {
-        fileUri = vscode.window.activeTextEditor.document.uri;
+      // 단축키 사용 시 현재 열린 모든 문서를 대상으로 함
+      if (!fileUri && !selectedFiles && vscode.window.activeTextEditor) {
+        selectedFiles = vscode.workspace.textDocuments.map(
+          (document) => document.uri
+        );
       }
 
-      if (!fileUri) {
-        vscode.window.showInformationMessage("No file or folder selected!");
-        return;
-      }
-
-      const isDirectory = fs.statSync(fileUri.fsPath).isDirectory();
-      if (isDirectory) {
-        const files = findAllFilesInFolder(fileUri.fsPath);
-        files.forEach((filePath) => {
-          const fileExtension = path.extname(filePath);
-          if (!isKnownFileType(fileExtension) && !isTextBasedFile(filePath)) {
-            return; // 알려진 파일 형식이 아니고 텍스트 기반이 아니면 건너뜀
-          }
-          const content = fs.readFileSync(filePath, "utf8");
-          const relativePath = path.relative(
-            vscode.workspace.rootPath || "",
-            filePath
-          );
-          const language = determineLanguage(fileExtension);
-          aggregatedContent += `### ${relativePath}\n\n\`\`\`${language}\n${content}\n\`\`\`\n\n`;
-        });
-      } else if (selectedFiles && selectedFiles.length > 0) {
+      // 아래의 로직은 기존과 동일하되, `selectedFiles`가 정의되었을 때의 처리가 추가됨
+      if (selectedFiles && selectedFiles.length > 0) {
+        // 선택된 파일들을 처리하는 로직
         selectedFiles.forEach((file) => {
           const fileExtension = path.extname(file.fsPath);
           if (
@@ -105,7 +88,8 @@ export function activate(context: vscode.ExtensionContext) {
           const language = determineLanguage(fileExtension);
           aggregatedContent += `### ${relativePath}\n\n\`\`\`${language}\n${content}\n\`\`\`\n\n`;
         });
-      } else {
+      } else if (fileUri) {
+        // 단일 파일 처리 로직 (기존과 동일)
         const fileExtension = path.extname(fileUri.fsPath);
         if (isKnownFileType(fileExtension) || isTextBasedFile(fileUri.fsPath)) {
           const content = fs.readFileSync(fileUri.fsPath, "utf8");
@@ -118,11 +102,17 @@ export function activate(context: vscode.ExtensionContext) {
         }
       }
 
-      vscode.env.clipboard
-        .writeText(aggregatedContent)
-        .then(() =>
-          vscode.window.showInformationMessage("Content copied to clipboard!")
+      if (aggregatedContent) {
+        vscode.env.clipboard
+          .writeText(aggregatedContent)
+          .then(() =>
+            vscode.window.showInformationMessage("Content copied to clipboard!")
+          );
+      } else {
+        vscode.window.showInformationMessage(
+          "No text files found or selected!"
         );
+      }
     }
   );
 
