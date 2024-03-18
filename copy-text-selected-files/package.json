@@ -8,9 +8,9 @@
     "url": "https://github.com/iyulab-rnd/vs-tools"
   },
   "icon": "logo_128.png",
-  "version": "1.0.5",
+  "version": "1.0.8",
   "engines": {
-    "vscode": "^1.81.0"
+    "vscode": "^1.75.0"
   },
   "categories": ["Other"],
   "keywords": ["development", "code", "copy", "clipboard", "text", "utilities", "explorer"],
@@ -32,7 +32,14 @@
         "title": "Copy Content of Selected Files",
         "category": "Explorer"
       }
-    ]
+    ],
+    "keybindings": [
+      {
+        "command": "copy-text-selected-files.copyFilesContent",
+        "key": "ctrl+alt+c",
+        "when": "explorerViewletVisible || editorTextFocus"
+      }
+    ]    
   },  
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -43,7 +50,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.81.0",
+    "@types/vscode": "^1.75.0",
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
     "@typescript-eslint/eslint-plugin": "^7.0.2",

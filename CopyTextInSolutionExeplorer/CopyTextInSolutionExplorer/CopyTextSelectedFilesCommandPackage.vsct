@@ -97,4 +97,9 @@
       <IDSymbol name="bmpPic1" value="1" />
     </GuidSymbol>
   </Symbols>
+
+	<KeyBindings>
+		<KeyBinding guid="guidCopyTextSelectedFilesCommandPackageCmdSet" id="CopyTextSelectedFilesCommandId" key1="C" mod1="Control Shift" editor="guidVSStd97" />
+	</KeyBindings>
+
 </CommandTable>

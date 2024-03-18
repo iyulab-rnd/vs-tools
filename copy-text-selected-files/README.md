@@ -64,6 +64,15 @@ body {
 ```
 ````
 
+## Keyboard Shortcuts
+
+This extension supports the following keyboard shortcuts for faster operation:
+
+- **Copy Content of Selected Files**: `Ctrl+Alt+C`
+  - You can use this shortcut after selecting one or more files or directories in the Explorer view. This will copy the contents directly to the clipboard.
+
+You can customize these shortcuts in Visual Studio Code by going to File > Preferences > Keyboard Shortcuts and searching for the 'Copy Content of Selected Files' command.
+
 ## Installation
 
 1. Open Visual Studio Code.
