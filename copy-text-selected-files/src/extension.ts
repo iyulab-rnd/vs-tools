@@ -4,25 +4,6 @@ import * as path from "path";
 import { StringDecoder } from "string_decoder";
 import { languageExtensions } from "./languageExtensions";
 
-// 주어진 폴더 내의 모든 파일 경로를 재귀적으로 찾는 함수
-function findAllFilesInFolder(
-  dirPath: string,
-  arrayOfFiles: string[] = []
-): string[] {
-  const files = fs.readdirSync(dirPath);
-
-  files.forEach((file) => {
-    const fullPath = path.join(dirPath, file);
-    if (fs.statSync(fullPath).isDirectory()) {
-      arrayOfFiles = findAllFilesInFolder(fullPath, arrayOfFiles);
-    } else {
-      arrayOfFiles.push(fullPath);
-    }
-  });
-
-  return arrayOfFiles;
-}
-
 function determineLanguage(fileExtension: string): string {
   for (const language in languageExtensions) {
     const extensions = languageExtensions[language];
@@ -64,16 +45,18 @@ export function activate(context: vscode.ExtensionContext) {
 
       // 단축키 사용 시 현재 열린 모든 문서를 대상으로 함
       if (!fileUri && !selectedFiles && vscode.window.activeTextEditor) {
-        selectedFiles = vscode.workspace.textDocuments.map(
-          (document) => document.uri
-        );
+        selectedFiles = vscode.workspace.textDocuments
+          .filter(
+            (document) =>
+              document.isUntitled === false && document.uri.scheme === "file"
+          )
+          .map((document) => document.uri);
       }
 
-      // 아래의 로직은 기존과 동일하되, `selectedFiles`가 정의되었을 때의 처리가 추가됨
       if (selectedFiles && selectedFiles.length > 0) {
         // 선택된 파일들을 처리하는 로직
         selectedFiles.forEach((file) => {
-          const fileExtension = path.extname(file.fsPath);
+          const fileExtension = path.extname(file.fsPath).toLowerCase();
           if (
             !isKnownFileType(fileExtension) &&
             !isTextBasedFile(file.fsPath)
@@ -85,20 +68,35 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.workspace.rootPath || "",
             file.fsPath
           );
-          const language = determineLanguage(fileExtension);
-          aggregatedContent += `### ${relativePath}\n\n\`\`\`${language}\n${content}\n\`\`\`\n\n`;
+          let language = determineLanguage(fileExtension);
+          let codeBlock = "```";
+
+          // 마크다운 파일일 경우, 코드 블록의 시작과 끝을 여섯 개의 백틱으로 설정
+          if (fileExtension === ".md") {
+            language = "markdown";
+            codeBlock = "``````";
+          }
+
+          aggregatedContent += `### ${relativePath}\n\n${codeBlock}${language}\n${content}\n${codeBlock}\n\n`;
         });
       } else if (fileUri) {
         // 단일 파일 처리 로직 (기존과 동일)
-        const fileExtension = path.extname(fileUri.fsPath);
+        const fileExtension = path.extname(fileUri.fsPath).toLowerCase();
         if (isKnownFileType(fileExtension) || isTextBasedFile(fileUri.fsPath)) {
           const content = fs.readFileSync(fileUri.fsPath, "utf8");
           const relativePath = path.relative(
             vscode.workspace.rootPath || "",
             fileUri.fsPath
           );
-          const language = determineLanguage(fileExtension);
-          aggregatedContent += `### ${relativePath}\n\n\`\`\`${language}\n${content}\n\`\`\`\n\n`;
+          let language = determineLanguage(fileExtension);
+          let codeBlock = "```";
+
+          if (fileExtension === ".md") {
+            language = "markdown";
+            codeBlock = "``````";
+          }
+
+          aggregatedContent += `### ${relativePath}\n\n${codeBlock}${language}\n${content}\n${codeBlock}\n\n`;
         }
       }
 
