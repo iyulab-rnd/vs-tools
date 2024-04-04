@@ -87,12 +87,10 @@ namespace CopyTextInSolutionExplorer
             try
             {
                 // DTE (Development Tools Environment) object를 통해 현재 환경에 접근
-                DTE2 dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
-                if (dte == null) return;
+                if (!(Package.GetGlobalService(typeof(DTE)) is DTE2 dte)) return;
 
                 // 선택된 항목들을 가져옴
-                var items = dte.ToolWindows.SolutionExplorer.SelectedItems as Array;
-                if (items == null) return;
+                if (!(dte.ToolWindows.SolutionExplorer.SelectedItems is Array items)) return;
 
                 string combinedText = "";
                 foreach (UIHierarchyItem selectedItem in items)
