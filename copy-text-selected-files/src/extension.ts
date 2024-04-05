@@ -4,6 +4,12 @@ import * as path from "path";
 import { StringDecoder } from "string_decoder";
 import { languageExtensions } from "./languageExtensions";
 
+// export const languageExtensions: { [key: string]: string[] } = {
+//   json: [".json", ".jsonc"],
+//   javascript: [".js", ".jsx", ".mjs", ".cjs"],
+//   typescript: [".ts", ".tsx"],
+//   ...
+
 function determineLanguage(fileExtension: string): string {
   for (const language in languageExtensions) {
     const extensions = languageExtensions[language];
