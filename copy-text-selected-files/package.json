@@ -8,15 +8,26 @@
     "url": "https://github.com/iyulab-rnd/vs-tools"
   },
   "icon": "logo_128.png",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "engines": {
     "vscode": "^1.75.0"
   },
-  "categories": ["Other"],
-  "keywords": ["development", "code", "copy", "clipboard", "text", "utilities", "explorer", "gpt"],
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "development",
+    "code",
+    "copy",
+    "clipboard",
+    "text",
+    "utilities",
+    "explorer",
+    "gpt"
+  ],
   "activationEvents": [
     "onCommand:copy-text-selected-files.copyFilesContent"
-  ],  
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "menus": {
@@ -39,8 +50,8 @@
         "key": "ctrl+alt+c",
         "when": "explorerViewletVisible || editorTextFocus"
       }
-    ]    
-  },  
+    ]
+  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
@@ -51,14 +62,17 @@
     "publish": "vsce publish"
   },
   "devDependencies": {
-    "@types/vscode": "^1.50.0",
+    "@types/mime-types": "^2.1.4",
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
+    "@types/vscode": "^1.50.0",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
     "@typescript-eslint/parser": "^7.0.2",
-    "eslint": "^8.56.0",
-    "typescript": "^5.3.3",
     "@vscode/test-cli": "^0.0.6",
-    "@vscode/test-electron": "^2.3.9"
+    "@vscode/test-electron": "^2.3.9",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
   }
 }
