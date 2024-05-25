@@ -11,38 +11,73 @@ const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
 function determineLanguage(fileExtension: string): string {
   for (const language in languageExtensions) {
     const extensions = languageExtensions[language];
-    if (
-      extensions.some(
-        (ext: string) => ext === fileExtension || ext === `*${fileExtension}`
-      )
-    ) {
+    if (extensions.includes(fileExtension)) {
       return language;
     }
   }
   return "plaintext";
 }
 
-function isTextBasedFile(filePath: string): boolean {
-  const buffer = fs.readFileSync(filePath);
-  const decoder = new StringDecoder("utf8");
-  const text = decoder.write(buffer);
-  const nonPrintable = text.match(/[\x00-\x08\x0E-\x1F\x80-\xFF]/g);
-  const threshold = 0.1;
-  return !nonPrintable || nonPrintable.length / text.length < threshold;
-}
-
-function isKnownFileType(fileExtension: string): boolean {
-  return Object.values(languageExtensions).some(
-    (extensions) =>
-      extensions.includes(fileExtension) ||
-      extensions.includes(`*${fileExtension}`)
-  );
-}
-
 function isBinaryFile(filePath: string): boolean {
   const mimeType = mime.lookup(filePath);
-  if (!mimeType) return true;
-  return !mimeType.startsWith("text/");
+  if (!mimeType) {
+    return false;
+  }
+  // MIME 타입이 아래 목록에 있는 경우 바이너리 파일로 간주
+  const binaryMimeTypes = [
+    // 이미지 파일
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/bmp",
+    "image/webp",
+    "image/tiff",
+    "image/svg+xml",
+    "image/x-icon",
+    // 비디오 파일
+    "video/mp4",
+    "video/x-msvideo",
+    "video/mpeg",
+    "video/ogg",
+    "video/webm",
+    "video/3gpp",
+    "video/3gpp2",
+    // 오디오 파일
+    "audio/midi",
+    "audio/mpeg",
+    "audio/webm",
+    "audio/ogg",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/x-pn-wav",
+    "audio/aac",
+    "audio/flac",
+    "audio/aiff",
+    "audio/basic",
+    "audio/x-aiff",
+    // 압축 파일
+    "application/zip",
+    "application/x-tar",
+    "application/x-bzip",
+    "application/x-bzip2",
+    "application/gzip",
+    "application/x-7z-compressed",
+    // 애플리케이션 파일
+    "application/octet-stream",
+    "application/pdf",
+    "application/x-msdownload",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/rtf",
+    "application/vnd.oasis.opendocument.text",
+    "application/vnd.oasis.opendocument.spreadsheet",
+    "application/vnd.oasis.opendocument.presentation",
+  ];
+  return binaryMimeTypes.includes(mimeType);
 }
 
 function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
@@ -87,8 +122,7 @@ export function activate(context: vscode.ExtensionContext) {
                 continue;
               }
 
-              const fileExtension = path.extname(filePath).toLowerCase();
-              if (!isKnownFileType(fileExtension) || isBinaryFile(filePath)) {
+              if (isBinaryFile(filePath)) {
                 continue;
               }
 
@@ -97,10 +131,12 @@ export function activate(context: vscode.ExtensionContext) {
                 vscode.workspace.rootPath || "",
                 filePath
               );
-              let language = determineLanguage(fileExtension);
+              let language = determineLanguage(
+                path.extname(filePath).toLowerCase()
+              );
               let codeBlock = "```";
 
-              if (fileExtension === ".md") {
+              if (path.extname(filePath).toLowerCase() === ".md") {
                 language = "markdown";
                 codeBlock = "``````";
               }
@@ -115,8 +151,7 @@ export function activate(context: vscode.ExtensionContext) {
               continue;
             }
 
-            const fileExtension = path.extname(file.fsPath).toLowerCase();
-            if (!isKnownFileType(fileExtension) || isBinaryFile(file.fsPath)) {
+            if (isBinaryFile(file.fsPath)) {
               continue;
             }
 
@@ -125,10 +160,12 @@ export function activate(context: vscode.ExtensionContext) {
               vscode.workspace.rootPath || "",
               file.fsPath
             );
-            let language = determineLanguage(fileExtension);
+            let language = determineLanguage(
+              path.extname(file.fsPath).toLowerCase()
+            );
             let codeBlock = "```";
 
-            if (fileExtension === ".md") {
+            if (path.extname(file.fsPath).toLowerCase() === ".md") {
               language = "markdown";
               codeBlock = "``````";
             }
@@ -149,8 +186,7 @@ export function activate(context: vscode.ExtensionContext) {
               continue;
             }
 
-            const fileExtension = path.extname(filePath).toLowerCase();
-            if (!isKnownFileType(fileExtension) || isBinaryFile(filePath)) {
+            if (isBinaryFile(filePath)) {
               continue;
             }
 
@@ -159,10 +195,12 @@ export function activate(context: vscode.ExtensionContext) {
               vscode.workspace.rootPath || "",
               filePath
             );
-            let language = determineLanguage(fileExtension);
+            let language = determineLanguage(
+              path.extname(filePath).toLowerCase()
+            );
             let codeBlock = "```";
 
-            if (fileExtension === ".md") {
+            if (path.extname(filePath).toLowerCase() === ".md") {
               language = "markdown";
               codeBlock = "``````";
             }
@@ -177,8 +215,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          const fileExtension = path.extname(fileUri.fsPath).toLowerCase();
-          if (!isKnownFileType(fileExtension) || isBinaryFile(fileUri.fsPath)) {
+          if (isBinaryFile(fileUri.fsPath)) {
             return;
           }
 
@@ -187,10 +224,12 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.workspace.rootPath || "",
             fileUri.fsPath
           );
-          let language = determineLanguage(fileExtension);
+          let language = determineLanguage(
+            path.extname(fileUri.fsPath).toLowerCase()
+          );
           let codeBlock = "```";
 
-          if (fileExtension === ".md") {
+          if (path.extname(fileUri.fsPath).toLowerCase() === ".md") {
             language = "markdown";
             codeBlock = "``````";
           }

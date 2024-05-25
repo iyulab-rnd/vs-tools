@@ -8,7 +8,7 @@
     "url": "https://github.com/iyulab-rnd/vs-tools"
   },
   "icon": "logo_128.png",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "engines": {
     "vscode": "^1.75.0"
   },
