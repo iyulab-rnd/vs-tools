@@ -86,7 +86,13 @@
     <Content Include="Resources\CopyTextSelectedFilesCommandPackage.ico" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="envdte">
+      <HintPath>C:\Program Files (x86)\Common Files\Microsoft Shared\MSEnv\PublicAssemblies\envdte.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.VisualStudio.Shell.15.0">
+      <HintPath>C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.15.0.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Design" />

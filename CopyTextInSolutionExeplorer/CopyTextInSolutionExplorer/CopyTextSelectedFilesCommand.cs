@@ -6,8 +6,9 @@ using Task = System.Threading.Tasks.Task;
 using EnvDTE;
 using EnvDTE80;
 using System.Windows.Forms;
-using CopyTextInSolutionExeplorer;
+using CopyTextInSolutionExplorer;
 using System.Linq;
+using CopyTextInSolutionExeplorer;
 
 namespace CopyTextInSolutionExplorer
 {
@@ -99,6 +100,10 @@ namespace CopyTextInSolutionExplorer
                     {
                         ProcessProjectItem(projectItem, ref combinedText);
                     }
+                    else if (selectedItem.Object is Project project)
+                    {
+                        ProcessProject(project, ref combinedText);
+                    }
                 }
 
                 // 클립보드에 combinedText 복사
@@ -158,6 +163,16 @@ namespace CopyTextInSolutionExplorer
                 {
                     ProcessProjectItem(subItem, ref combinedText);
                 }
+            }
+        }
+
+        private void ProcessProject(Project project, ref string combinedText)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            foreach (ProjectItem projectItem in project.ProjectItems)
+            {
+                ProcessProjectItem(projectItem, ref combinedText);
             }
         }
     }
