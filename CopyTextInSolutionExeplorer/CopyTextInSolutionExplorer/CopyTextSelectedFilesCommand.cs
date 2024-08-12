@@ -9,6 +9,10 @@ using System.Windows.Forms;
 using CopyTextInSolutionExplorer;
 using System.Linq;
 using CopyTextInSolutionExeplorer;
+using System.Collections.Generic;
+using Microsoft.Internal.VisualStudio.PlatformUI.VideoLauncher;
+using Microsoft.VisualStudio.OLE.Interop;
+using Microsoft.VisualStudio.Package;
 
 namespace CopyTextInSolutionExplorer
 {
@@ -94,15 +98,17 @@ namespace CopyTextInSolutionExplorer
                 if (!(dte.ToolWindows.SolutionExplorer.SelectedItems is Array items)) return;
 
                 string combinedText = "";
+                HashSet<string> processedFiles = new HashSet<string>(); // 중복 방지를 위한 HashSet 초기화
+
                 foreach (UIHierarchyItem selectedItem in items)
                 {
                     if (selectedItem.Object is ProjectItem projectItem)
                     {
-                        ProcessProjectItem(projectItem, ref combinedText);
+                        ProcessProjectItem(projectItem, ref combinedText, processedFiles);
                     }
                     else if (selectedItem.Object is Project project)
                     {
-                        ProcessProject(project, ref combinedText);
+                        ProcessProject(project, ref combinedText, processedFiles);
                     }
                 }
 
@@ -135,7 +141,7 @@ namespace CopyTextInSolutionExplorer
                 return "";
         }
 
-        private void ProcessProjectItem(ProjectItem projectItem, ref string combinedText)
+        private void ProcessProjectItem(ProjectItem projectItem, ref string combinedText, HashSet<string> processedFiles)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -143,36 +149,87 @@ namespace CopyTextInSolutionExplorer
             {
                 // 파일 경로를 가져옴
                 string filePath = projectItem.FileNames[1];
-                if (!string.IsNullOrEmpty(filePath) && System.IO.File.Exists(filePath))
+
+                // 이미 처리된 파일인지 확인
+                if (!string.IsNullOrEmpty(filePath) && System.IO.File.Exists(filePath) && !processedFiles.Contains(filePath))
                 {
+                    // 파일 경로를 HashSet에 추가
+                    processedFiles.Add(filePath);
+
+                    // 프로젝트 이름을 포함한 솔루션 탐색기의 루트부터 상대 경로 계산
+                    string relativePath = GetRelativePathWithProjectName(filePath, projectItem.ContainingProject);
+
                     string fileName = System.IO.Path.GetFileName(filePath);
                     string fileExtension = System.IO.Path.GetExtension(fileName);
                     // 확장자를 기준으로 언어를 매핑
                     string markdownLanguage = MapFileExtensionToLanguage(fileExtension);
 
-                    // 마크다운 형식으로 파일 이름과 언어를 추가
-                    combinedText += $"### {fileName}\n\n```{markdownLanguage}\n";
+                    // 마크다운 형식으로 파일 경로와 언어를 추가
+                    combinedText += $"### {relativePath}\n\n```{markdownLanguage}\n";
                     // 파일 내용을 읽고 combinedText에 추가
                     combinedText += System.IO.File.ReadAllText(filePath) + "\n```\n\n";
                 }
             }
-            else if (projectItem.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder)
+
+            // 하위 항목들을 처리
+            if (projectItem.ProjectItems != null && projectItem.ProjectItems.Count > 0)
             {
-                // 폴더 내의 모든 파일 처리
                 foreach (ProjectItem subItem in projectItem.ProjectItems)
                 {
-                    ProcessProjectItem(subItem, ref combinedText);
+                    ProcessProjectItem(subItem, ref combinedText, processedFiles);
+                }
+            }
+
+            // 연결된 파일들 처리 (.xaml.cs 등)
+            if (projectItem.FileCount > 1)
+            {
+                for (short i = 2; i <= projectItem.FileCount; i++)
+                {
+                    string filePath = projectItem.FileNames[i];
+                    if (!string.IsNullOrEmpty(filePath) && System.IO.File.Exists(filePath) && !processedFiles.Contains(filePath))
+                    {
+                        // 파일 경로를 HashSet에 추가
+                        processedFiles.Add(filePath);
+
+                        // 프로젝트 이름을 포함한 솔루션 탐색기의 루트부터 상대 경로 계산
+                        string relativePath = GetRelativePathWithProjectName(filePath, projectItem.ContainingProject);
+
+                        string fileName = System.IO.Path.GetFileName(filePath);
+                        string fileExtension = System.IO.Path.GetExtension(fileName);
+                        // 확장자를 기준으로 언어를 매핑
+                        string markdownLanguage = MapFileExtensionToLanguage(fileExtension);
+
+                        // 마크다운 형식으로 파일 경로와 언어를 추가
+                        combinedText += $"### {relativePath}\n\n```{markdownLanguage}\n";
+                        // 파일 내용을 읽고 combinedText에 추가
+                        combinedText += System.IO.File.ReadAllText(filePath) + "\n```\n\n";
+                    }
                 }
             }
         }
 
-        private void ProcessProject(Project project, ref string combinedText)
+        private string GetRelativePathWithProjectName(string filePath, Project project)
+        {
+            string projectDirectory = System.IO.Path.GetDirectoryName(project.FullName);
+            string relativePath = GetRelativePath(filePath, project.FullName);
+            return System.IO.Path.Combine(project.Name, relativePath);
+        }
+
+        private string GetRelativePath(string filePath, string projectPath)
+        {
+            Uri fileUri = new Uri(filePath);
+            Uri projectUri = new Uri(System.IO.Path.GetDirectoryName(projectPath) + "\\");
+            Uri relativeUri = projectUri.MakeRelativeUri(fileUri);
+            return Uri.UnescapeDataString(relativeUri.ToString().Replace('/', '\\'));
+        }
+
+        private void ProcessProject(Project project, ref string combinedText, HashSet<string> processedFiles)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
             foreach (ProjectItem projectItem in project.ProjectItems)
             {
-                ProcessProjectItem(projectItem, ref combinedText);
+                ProcessProjectItem(projectItem, ref combinedText, processedFiles);
             }
         }
     }
