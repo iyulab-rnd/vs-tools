@@ -2,42 +2,44 @@
 <CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
 	<Extern href="stdidcmd.h"/>
 	<Extern href="vsshlids.h"/>
-
 	<Commands package="guidCopyTextSelectedFilesCommandPackage">
 		<Groups>
 			<Group guid="guidCopyTextSelectedFilesCommandPackageCmdSet" id="FileCopyMenuGroup" priority="0x0600">
-				<Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE" />
 			</Group>
 		</Groups>
-
 		<Buttons>
 			<Button guid="guidCopyTextSelectedFilesCommandPackageCmdSet" id="CopyTextSelectedFilesCommandId" priority="0x0100" type="Button">
 				<Parent guid="guidCopyTextSelectedFilesCommandPackageCmdSet" id="FileCopyMenuGroup" />
 				<Icon guid="guidImages" id="bmpPic1" />
 				<Strings>
-					<ButtonText>Copy Text of Selected Files</ButtonText>
+					<ButtonText>Copy Text Selected Files</ButtonText>
 				</Strings>
 			</Button>
 		</Buttons>
-
 		<Bitmaps>
 			<Bitmap guid="guidImages" href="Resources\CopyTextSelectedFilesCommand.png" usedList="bmpPic1"/>
 		</Bitmaps>
 	</Commands>
+	<CommandPlacements>
+		<CommandPlacement guid="guidCopyTextSelectedFilesCommandPackageCmdSet" id="FileCopyMenuGroup" priority="0x600">
+			<Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE" />
+		</CommandPlacement>
+		<CommandPlacement guid="guidCopyTextSelectedFilesCommandPackageCmdSet" id="FileCopyMenuGroup" priority="0x550">
+			<Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_FOLDERNODE" />
+		</CommandPlacement>
+		<CommandPlacement guid="guidCopyTextSelectedFilesCommandPackageCmdSet" id="FileCopyMenuGroup" priority="0x600">
+			<Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_MULTIITEM" />
+		</CommandPlacement>
+	</CommandPlacements>
 
 	<Symbols>
 		<GuidSymbol name="guidCopyTextSelectedFilesCommandPackage" value="{1542fd2b-6c54-4f3e-95af-7e013a7210b5}" />
 		<GuidSymbol name="guidCopyTextSelectedFilesCommandPackageCmdSet" value="{ecda92e4-f110-40f3-9dbf-753a995322ec}">
 			<IDSymbol name="FileCopyMenuGroup" value="0x1020" />
 			<IDSymbol name="CopyTextSelectedFilesCommandId" value="0x0100" />
-		</GuidSymbol>
-		<GuidSymbol name="guidImages" value="{5a57d1f4-bcd6-4b18-ac91-beac9fd4b205}">
+		</GuidSymbol>	
+		<GuidSymbol name="guidImages" value="{5a57d1f4-bcd6-4b18-ac91-beac9fd4b205}" >
 			<IDSymbol name="bmpPic1" value="1" />
 		</GuidSymbol>
 	</Symbols>
-
-	<KeyBindings>
-		<KeyBinding guid="guidCopyTextSelectedFilesCommandPackageCmdSet" id="CopyTextSelectedFilesCommandId" key1="C" mod1="Control Shift" editor="guidVSStd97" />
-	</KeyBindings>
-
 </CommandTable>
