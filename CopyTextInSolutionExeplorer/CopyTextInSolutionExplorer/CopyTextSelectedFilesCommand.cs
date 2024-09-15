@@ -99,12 +99,24 @@ namespace CopyTextInSolutionExplorer
 
         private string MapFileExtensionToLanguage(string fileExtension)
         {
-            var map = LanguageExtensions.GetMap();
+            try
+            {
+                var map = LanguageExtensions.GetMap();
 
-            if (map.TryGetValue(fileExtension, out string language))
-                return language;
-            else
-                return "";
+                if (map.TryGetValue(fileExtension, out string language))
+                    return language;
+            }
+            catch (Exception)
+            {
+                // LanguageExtensions를 찾을 수 없는 경우 이 블록이 실행됩니다.
+            }
+
+            // LanguageExtensions를 찾을 수 없거나 매핑이 없는 경우, 확장자를 그대로 사용합니다.
+            if (fileExtension.StartsWith("."))
+            {
+                fileExtension = fileExtension.Substring(1);
+            }
+            return fileExtension.ToLower();
         }
 
         private void ProcessProjectItem(ProjectItem projectItem, ref string combinedText, HashSet<string> processedFiles)
