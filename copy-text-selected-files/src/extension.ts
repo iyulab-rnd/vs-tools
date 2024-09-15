@@ -15,7 +15,8 @@ function determineLanguage(fileExtension: string): string {
       return language;
     }
   }
-  return "plaintext";
+  // 언어를 찾지 못한 경우 확장자를 그대로 반환 (첫 글자의 점 제거)
+  return fileExtension.startsWith('.') ? fileExtension.slice(1) : fileExtension;
 }
 
 function isBinaryFile(filePath: string): boolean {
