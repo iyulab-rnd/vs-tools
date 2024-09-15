@@ -76,6 +76,11 @@ namespace CopyTextInSolutionExplorer
                     }
                 }
 
+                if (string.IsNullOrEmpty(combinedText))
+                {
+                    dte.StatusBar.Text = "No files were selected or the selected files are empty.";
+                    return;
+                }
                 Clipboard.SetText(combinedText);
 
                 dte.StatusBar.Text = "The contents of the file(s) have been copied to the clipboard.";
@@ -106,53 +111,123 @@ namespace CopyTextInSolutionExplorer
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            if (projectItem.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFile)
+            if (projectItem == null)
             {
-                string filePath = projectItem.FileNames[1];
-
-                if (!string.IsNullOrEmpty(filePath) && System.IO.File.Exists(filePath) && !processedFiles.Contains(filePath))
-                {
-                    processedFiles.Add(filePath);
-
-                    string relativePath = GetRelativePathWithProjectName(filePath, projectItem.ContainingProject);
-
-                    string fileName = System.IO.Path.GetFileName(filePath);
-                    string fileExtension = System.IO.Path.GetExtension(fileName);
-                    string markdownLanguage = MapFileExtensionToLanguage(fileExtension);
-
-                    combinedText += $"### {relativePath}\n\n```{markdownLanguage}\n";
-                    combinedText += System.IO.File.ReadAllText(filePath) + "\n```\n\n";
-                }
+                return;
             }
 
-            if (projectItem.ProjectItems != null && projectItem.ProjectItems.Count > 0)
+            if (projectItem.Kind == EnvDTE.Constants.vsProjectItemKindSolutionItems)
             {
-                foreach (ProjectItem subItem in projectItem.ProjectItems)
+                // This is a solution folder
+                if (projectItem.ProjectItems != null)
                 {
-                    ProcessProjectItem(subItem, ref combinedText, processedFiles);
-                }
-            }
-
-            if (projectItem.FileCount > 1)
-            {
-                for (short i = 2; i <= projectItem.FileCount; i++)
-                {
-                    string filePath = projectItem.FileNames[i];
-                    if (!string.IsNullOrEmpty(filePath) && System.IO.File.Exists(filePath) && !processedFiles.Contains(filePath))
+                    foreach (ProjectItem subItem in projectItem.ProjectItems)
                     {
-                        processedFiles.Add(filePath);
+                        ProcessProjectItem(subItem, ref combinedText, processedFiles);
+                    }
+                }
+                else
+                {
+                    // Handle the case when ProjectItems is null for a Solution Items folder
+                    ProcessSolutionItem(projectItem, ref combinedText, processedFiles);
+                }
+            }
+            else
+            {
+                // Process the current item
+                ProcessSingleItem(projectItem, ref combinedText, processedFiles);
 
-                        string relativePath = GetRelativePathWithProjectName(filePath, projectItem.ContainingProject);
-
-                        string fileName = System.IO.Path.GetFileName(filePath);
-                        string fileExtension = System.IO.Path.GetExtension(fileName);
-                        string markdownLanguage = MapFileExtensionToLanguage(fileExtension);
-
-                        combinedText += $"### {relativePath}\n\n```{markdownLanguage}\n";
-                        combinedText += System.IO.File.ReadAllText(filePath) + "\n```\n\n";
+                // Process subitems if any
+                if (projectItem.ProjectItems != null)
+                {
+                    foreach (ProjectItem subItem in projectItem.ProjectItems)
+                    {
+                        ProcessProjectItem(subItem, ref combinedText, processedFiles);
                     }
                 }
             }
+        }
+
+        private void ProcessSolutionItem(ProjectItem solutionItem, ref string combinedText, HashSet<string> processedFiles)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            // Try to get the physical file associated with the solution item
+            string filePath = solutionItem.FileNames[1];
+            if (!string.IsNullOrEmpty(filePath) && System.IO.File.Exists(filePath) && !processedFiles.Contains(filePath))
+            {
+                processedFiles.Add(filePath);
+
+                string relativePath = GetRelativePathForSolutionItem(filePath, solutionItem);
+
+                string fileName = System.IO.Path.GetFileName(filePath);
+                string fileExtension = System.IO.Path.GetExtension(fileName);
+                string markdownLanguage = MapFileExtensionToLanguage(fileExtension);
+
+                combinedText += $"### {relativePath}\n\n```{markdownLanguage}\n";
+                combinedText += System.IO.File.ReadAllText(filePath) + "\n```\n\n";
+            }
+        }
+
+        private string GetRelativePathForSolutionItem(string filePath, ProjectItem solutionItem)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            string solutionDir = System.IO.Path.GetDirectoryName(solutionItem.DTE.Solution.FullName);
+            Uri fileUri = new Uri(filePath);
+            Uri solutionUri = new Uri(solutionDir + System.IO.Path.DirectorySeparatorChar);
+            return Uri.UnescapeDataString(solutionUri.MakeRelativeUri(fileUri).ToString().Replace('/', System.IO.Path.DirectorySeparatorChar));
+        }
+
+        private void ProcessSingleItem(ProjectItem item, ref string combinedText, HashSet<string> processedFiles)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            for (short i = 1; i <= item.FileCount; i++)
+            {
+                string filePath = item.FileNames[i];
+                if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath) || processedFiles.Contains(filePath))
+                {
+                    continue;
+                }
+
+                processedFiles.Add(filePath);
+
+                string actualFilePath = GetActualFilePath(item, filePath);
+                string relativePath = GetRelativePathWithProjectName(actualFilePath, item.ContainingProject);
+
+                string fileName = System.IO.Path.GetFileName(actualFilePath);
+                string fileExtension = System.IO.Path.GetExtension(fileName);
+                string markdownLanguage = MapFileExtensionToLanguage(fileExtension);
+
+                combinedText += $"### {relativePath}\n\n```{markdownLanguage}\n";
+                combinedText += System.IO.File.ReadAllText(actualFilePath) + "\n```\n\n";
+            }
+        }
+
+        private string GetActualFilePath(ProjectItem item, string originalPath)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            try
+            {
+                var linkProperty = item.Properties.Item("Link");
+                if (linkProperty != null && linkProperty.Value != null)
+                {
+                    string linkPath = linkProperty.Value.ToString();
+                    if (!string.IsNullOrEmpty(linkPath))
+                    {
+                        string projectPath = System.IO.Path.GetDirectoryName(item.ContainingProject.FullName);
+                        return System.IO.Path.Combine(projectPath, linkPath);
+                    }
+                }
+            }
+            catch (ArgumentException)
+            {
+                // The "Link" property doesn't exist, so this is not a linked item
+            }
+
+            return originalPath;
         }
 
         private void ProcessFolderItem(UIHierarchyItem folderItem, ref string combinedText, HashSet<string> processedFiles)
