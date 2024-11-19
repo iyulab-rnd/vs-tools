@@ -1,254 +1,130 @@
+// src/extension.ts
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
-import { StringDecoder } from "string_decoder";
-import { languageExtensions } from "./languageExtensions";
-import * as mime from "mime-types";
+import { getFileFormat } from "./languageExtensions";
 
 // 최대 파일 크기 (3MB)
-const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
+const MAX_FILE_SIZE = 3 * 1024 * 1024;
 
-function determineLanguage(fileExtension: string): string {
-  for (const language in languageExtensions) {
-    const extensions = languageExtensions[language];
-    if (extensions.includes(fileExtension)) {
-      return language;
-    }
-  }
-  // 언어를 찾지 못한 경우 확장자를 그대로 반환 (첫 글자의 점 제거)
-  return fileExtension.startsWith('.') ? fileExtension.slice(1) : fileExtension;
+interface FileProcessingResult {
+  content: string;
+  relativePath: string;
+  language: string;
 }
 
-function isBinaryFile(filePath: string): boolean {
-  const mimeType = mime.lookup(filePath);
-  if (!mimeType) {
+async function getSelectedFiles(): Promise<vscode.Uri[]> {
+  // 열려있는 모든 텍스트 에디터의 파일들 우선
+  const visibleTextEditors = vscode.window.visibleTextEditors;
+  if (visibleTextEditors.length > 0) {
+    return visibleTextEditors.map(editor => editor.document.uri);
+  }
+
+  // 현재 활성화된 에디터 확인
+  const activeTextEditor = vscode.window.activeTextEditor;
+  if (activeTextEditor) {
+    return [activeTextEditor.document.uri];
+  }
+
+  throw new Error("No files selected or open in editor");
+}
+
+function canProcessFile(filePath: string): boolean {
+  try {
+    const fileStats = fs.statSync(filePath);
+    if (fileStats.size > MAX_FILE_SIZE) {
+      vscode.window.showWarningMessage(`Skipped large file: ${filePath}`);
+      return false;
+    }
+
+    // getFileFormat이 null을 반환하면 처리할 수 없는 파일
+    return getFileFormat(filePath) !== null;
+  } catch (error) {
+    console.error(`Error processing file ${filePath}:`, error);
     return false;
   }
-  // MIME 타입이 아래 목록에 있는 경우 바이너리 파일로 간주
-  const binaryMimeTypes = [
-    // 이미지 파일
-    "image/png",
-    "image/jpeg",
-    "image/gif",
-    "image/bmp",
-    "image/webp",
-    "image/tiff",
-    "image/svg+xml",
-    "image/x-icon",
-    // 비디오 파일
-    "video/mp4",
-    "video/x-msvideo",
-    "video/mpeg",
-    "video/ogg",
-    "video/webm",
-    "video/3gpp",
-    "video/3gpp2",
-    // 오디오 파일
-    "audio/midi",
-    "audio/mpeg",
-    "audio/webm",
-    "audio/ogg",
-    "audio/wav",
-    "audio/x-wav",
-    "audio/x-pn-wav",
-    "audio/aac",
-    "audio/flac",
-    "audio/aiff",
-    "audio/basic",
-    "audio/x-aiff",
-    // 압축 파일
-    "application/zip",
-    "application/x-tar",
-    "application/x-bzip",
-    "application/x-bzip2",
-    "application/gzip",
-    "application/x-7z-compressed",
-    // 애플리케이션 파일
-    "application/octet-stream",
-    "application/pdf",
-    "application/x-msdownload",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-powerpoint",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "application/rtf",
-    "application/vnd.oasis.opendocument.text",
-    "application/vnd.oasis.opendocument.spreadsheet",
-    "application/vnd.oasis.opendocument.presentation",
-  ];
-  return binaryMimeTypes.includes(mimeType);
 }
 
-function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
-  const files = fs.readdirSync(dirPath);
-  files.forEach((file) => {
-    const filePath = path.join(dirPath, file);
-    if (fs.statSync(filePath).isDirectory()) {
-      arrayOfFiles = getAllFiles(filePath, arrayOfFiles);
+function processFile(filePath: string, basePath: string): FileProcessingResult | null {
+  if (!canProcessFile(filePath)) {
+    return null;
+  }
+
+  try {
+    const content = fs.readFileSync(filePath, "utf8");
+    const relativePath = path.relative(basePath, filePath);
+    const format = getFileFormat(filePath);
+    
+    // format은 null이 아님이 보장됨 (canProcessFile에서 체크)
+    return { content, relativePath, language: format! };
+  } catch (error) {
+    console.error(`Error reading file ${filePath}:`, error);
+    return null;
+  }
+}
+
+function formatContent(result: FileProcessingResult): string {
+  const codeBlock = result.language === 'markdown' ? '``````' : '```';
+  return `### ${result.relativePath}\n\n${codeBlock}${result.language}\n${result.content}\n${codeBlock}\n\n`;
+}
+
+async function processFileOrDirectory(uri: vscode.Uri): Promise<string> {
+  try {
+    const fileStats = fs.statSync(uri.fsPath);
+    let content = '';
+
+    if (fileStats.isDirectory()) {
+      const allFiles = fs.readdirSync(uri.fsPath)
+        .map(file => path.join(uri.fsPath, file))
+        .filter(filePath => fs.statSync(filePath).isFile());
+      const basePath = uri.fsPath;
+
+      for (const filePath of allFiles) {
+        const result = processFile(filePath, basePath);
+        if (result) {
+          content += formatContent(result);
+        }
+      }
     } else {
-      arrayOfFiles.push(filePath);
+      const result = processFile(uri.fsPath, path.dirname(uri.fsPath));
+      if (result) {
+        content += formatContent(result);
+      }
     }
-  });
-  return arrayOfFiles;
+
+    return content;
+  } catch (error) {
+    console.error(`Error processing path ${uri.fsPath}:`, error);
+    return '';
+  }
 }
 
 export function activate(context: vscode.ExtensionContext) {
   let disposable = vscode.commands.registerCommand(
     "copy-text-selected-files.copyFilesContent",
-    async (fileUri?: vscode.Uri, selectedFiles?: vscode.Uri[]) => {
-      let aggregatedContent = "";
+    async (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
+      try {
+        const filesToProcess = uris || (uri ? [uri] : await getSelectedFiles());
 
-      if (!fileUri && !selectedFiles && vscode.window.activeTextEditor) {
-        selectedFiles = vscode.workspace.textDocuments
-          .filter(
-            (document) =>
-              document.isUntitled === false && document.uri.scheme === "file"
-          )
-          .map((document) => document.uri);
-      }
-
-      if (selectedFiles && selectedFiles.length > 0) {
-        for (const file of selectedFiles) {
-          const fileStats = fs.statSync(file.fsPath);
-          if (fileStats.isDirectory()) {
-            const allFiles = getAllFiles(file.fsPath);
-            for (const filePath of allFiles) {
-              const fileStats = fs.statSync(filePath);
-              if (fileStats.size > MAX_FILE_SIZE) {
-                vscode.window.showWarningMessage(
-                  `Skipped large file: ${filePath}`
-                );
-                continue;
-              }
-
-              if (isBinaryFile(filePath)) {
-                continue;
-              }
-
-              const content = fs.readFileSync(filePath, "utf8");
-              const relativePath = path.relative(
-                vscode.workspace.rootPath || "",
-                filePath
-              );
-              let language = determineLanguage(
-                path.extname(filePath).toLowerCase()
-              );
-              let codeBlock = "```";
-
-              if (path.extname(filePath).toLowerCase() === ".md") {
-                language = "markdown";
-                codeBlock = "``````";
-              }
-
-              aggregatedContent += `### ${relativePath}\n\n${codeBlock}${language}\n${content}\n${codeBlock}\n\n`;
-            }
-          } else {
-            if (fileStats.size > MAX_FILE_SIZE) {
-              vscode.window.showWarningMessage(
-                `Skipped large file: ${file.fsPath}`
-              );
-              continue;
-            }
-
-            if (isBinaryFile(file.fsPath)) {
-              continue;
-            }
-
-            const content = fs.readFileSync(file.fsPath, "utf8");
-            const relativePath = path.relative(
-              vscode.workspace.rootPath || "",
-              file.fsPath
-            );
-            let language = determineLanguage(
-              path.extname(file.fsPath).toLowerCase()
-            );
-            let codeBlock = "```";
-
-            if (path.extname(file.fsPath).toLowerCase() === ".md") {
-              language = "markdown";
-              codeBlock = "``````";
-            }
-
-            aggregatedContent += `### ${relativePath}\n\n${codeBlock}${language}\n${content}\n${codeBlock}\n\n`;
-          }
+        if (!filesToProcess?.length) {
+          vscode.window.showInformationMessage("No files selected or open in editor");
+          return;
         }
-      } else if (fileUri) {
-        const fileStats = fs.statSync(fileUri.fsPath);
-        if (fileStats.isDirectory()) {
-          const allFiles = getAllFiles(fileUri.fsPath);
-          for (const filePath of allFiles) {
-            const fileStats = fs.statSync(filePath);
-            if (fileStats.size > MAX_FILE_SIZE) {
-              vscode.window.showWarningMessage(
-                `Skipped large file: ${filePath}`
-              );
-              continue;
-            }
 
-            if (isBinaryFile(filePath)) {
-              continue;
-            }
+        let aggregatedContent = '';
+        for (const file of filesToProcess) {
+          aggregatedContent += await processFileOrDirectory(file);
+        }
 
-            const content = fs.readFileSync(filePath, "utf8");
-            const relativePath = path.relative(
-              vscode.workspace.rootPath || "",
-              filePath
-            );
-            let language = determineLanguage(
-              path.extname(filePath).toLowerCase()
-            );
-            let codeBlock = "```";
-
-            if (path.extname(filePath).toLowerCase() === ".md") {
-              language = "markdown";
-              codeBlock = "``````";
-            }
-
-            aggregatedContent += `### ${relativePath}\n\n${codeBlock}${language}\n${content}\n${codeBlock}\n\n`;
-          }
+        if (aggregatedContent) {
+          await vscode.env.clipboard.writeText(aggregatedContent);
+          vscode.window.showInformationMessage("Content copied to clipboard!");
         } else {
-          if (fileStats.size > MAX_FILE_SIZE) {
-            vscode.window.showWarningMessage(
-              `Skipped large file: ${fileUri.fsPath}`
-            );
-            return;
-          }
-
-          if (isBinaryFile(fileUri.fsPath)) {
-            return;
-          }
-
-          const content = fs.readFileSync(fileUri.fsPath, "utf8");
-          const relativePath = path.relative(
-            vscode.workspace.rootPath || "",
-            fileUri.fsPath
-          );
-          let language = determineLanguage(
-            path.extname(fileUri.fsPath).toLowerCase()
-          );
-          let codeBlock = "```";
-
-          if (path.extname(fileUri.fsPath).toLowerCase() === ".md") {
-            language = "markdown";
-            codeBlock = "``````";
-          }
-
-          aggregatedContent += `### ${relativePath}\n\n${codeBlock}${language}\n${content}\n${codeBlock}\n\n`;
+          vscode.window.showInformationMessage("No text files found or selected!");
         }
-      }
-
-      if (aggregatedContent) {
-        vscode.env.clipboard
-          .writeText(aggregatedContent)
-          .then(() =>
-            vscode.window.showInformationMessage("Content copied to clipboard!")
-          );
-      } else {
-        vscode.window.showInformationMessage(
-          "No text files found or selected!"
-        );
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'An unknown error occurred';
+        vscode.window.showErrorMessage(`Error: ${message}`);
       }
     }
   );
