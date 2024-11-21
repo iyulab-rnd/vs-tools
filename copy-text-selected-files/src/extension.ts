@@ -1,11 +1,9 @@
-// src/extension.ts
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import { getFileFormat } from "./languageExtensions";
 
-// 최대 파일 크기 (3MB)
-const MAX_FILE_SIZE = 3 * 1024 * 1024;
+const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3 MB
 
 interface FileProcessingResult {
   content: string;
@@ -14,13 +12,11 @@ interface FileProcessingResult {
 }
 
 async function getSelectedFiles(): Promise<vscode.Uri[]> {
-  // 열려있는 모든 텍스트 에디터의 파일들 우선
   const visibleTextEditors = vscode.window.visibleTextEditors;
   if (visibleTextEditors.length > 0) {
     return visibleTextEditors.map(editor => editor.document.uri);
   }
 
-  // 현재 활성화된 에디터 확인
   const activeTextEditor = vscode.window.activeTextEditor;
   if (activeTextEditor) {
     return [activeTextEditor.document.uri];
@@ -37,7 +33,6 @@ function canProcessFile(filePath: string): boolean {
       return false;
     }
 
-    // getFileFormat이 null을 반환하면 처리할 수 없는 파일
     return getFileFormat(filePath) !== null;
   } catch (error) {
     console.error(`Error processing file ${filePath}:`, error);
@@ -55,7 +50,6 @@ function processFile(filePath: string, basePath: string): FileProcessingResult |
     const relativePath = path.relative(basePath, filePath);
     const format = getFileFormat(filePath);
     
-    // format은 null이 아님이 보장됨 (canProcessFile에서 체크)
     return { content, relativePath, language: format! };
   } catch (error) {
     console.error(`Error reading file ${filePath}:`, error);
@@ -68,15 +62,32 @@ function formatContent(result: FileProcessingResult): string {
   return `### ${result.relativePath}\n\n${codeBlock}${result.language}\n${result.content}\n${codeBlock}\n\n`;
 }
 
+function getAllFilesRecursively(directoryPath: string): string[] {
+  let files: string[] = [];
+  
+  const items = fs.readdirSync(directoryPath);
+  
+  for (const item of items) {
+    const fullPath = path.join(directoryPath, item);
+    const stats = fs.statSync(fullPath);
+    
+    if (stats.isDirectory()) {
+      files = files.concat(getAllFilesRecursively(fullPath));
+    } else if (stats.isFile()) {
+      files.push(fullPath);
+    }
+  }
+  
+  return files;
+}
+
 async function processFileOrDirectory(uri: vscode.Uri): Promise<string> {
   try {
     const fileStats = fs.statSync(uri.fsPath);
     let content = '';
 
     if (fileStats.isDirectory()) {
-      const allFiles = fs.readdirSync(uri.fsPath)
-        .map(file => path.join(uri.fsPath, file))
-        .filter(filePath => fs.statSync(filePath).isFile());
+      const allFiles = getAllFilesRecursively(uri.fsPath);
       const basePath = uri.fsPath;
 
       for (const filePath of allFiles) {
