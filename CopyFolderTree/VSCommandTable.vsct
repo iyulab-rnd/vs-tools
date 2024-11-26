@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<Extern href="stdidcmd.h"/>
+	<Extern href="vsshlids.h"/>
+	<Commands package="guidCopyFolderTreePackage">
+		<Groups>
+			<Group guid="guidCopyFolderTreePackageCmdSet" id="MyMenuGroup" priority="0x0600">
+			</Group>
+		</Groups>
+
+		<Buttons>
+			<Button guid="guidCopyFolderTreePackageCmdSet" id="CopyFolderOnlyCommandId" priority="0x0100" type="Button">
+				<Parent guid="guidCopyFolderTreePackageCmdSet" id="MyMenuGroup" />
+				<Icon guid="guidImages" id="bmpPic1" />
+				<Strings>
+					<ButtonText>Copy Folder Tree</ButtonText>
+				</Strings>
+			</Button>
+			<Button guid="guidCopyFolderTreePackageCmdSet" id="CopyFolderAndFileCommandId" priority="0x0101" type="Button">
+				<Parent guid="guidCopyFolderTreePackageCmdSet" id="MyMenuGroup" />
+				<Icon guid="guidImages" id="bmpPic1" />
+				<Strings>
+					<ButtonText>Copy Folder and File Tree</ButtonText>
+				</Strings>
+			</Button>
+		</Buttons>
+
+		<Bitmaps>
+			<Bitmap guid="guidImages" href="Resources\CopyFolderTreeCommand.png" usedList="bmpPic1"/>
+		</Bitmaps>
+	</Commands>
+
+	<CommandPlacements>
+		<!-- 파일 노드에 메뉴 추가 -->
+		<CommandPlacement guid="guidCopyFolderTreePackageCmdSet" id="MyMenuGroup" priority="0x600">
+			<Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE"/>
+		</CommandPlacement>
+
+		<!-- 폴더 노드에 메뉴 추가 -->
+		<CommandPlacement guid="guidCopyFolderTreePackageCmdSet" id="MyMenuGroup" priority="0x550">
+			<Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_FOLDERNODE"/>
+		</CommandPlacement>
+
+		<!-- 프로젝트 노드에 메뉴 추가 -->
+		<CommandPlacement guid="guidCopyFolderTreePackageCmdSet" id="MyMenuGroup" priority="0x550">
+			<Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_PROJNODE"/>
+		</CommandPlacement>
+
+		<!-- 다중 선택에 대한 메뉴 추가 -->
+		<CommandPlacement guid="guidCopyFolderTreePackageCmdSet" id="MyMenuGroup" priority="0x600">
+			<Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_MULTIITEM"/>
+		</CommandPlacement>
+	</CommandPlacements>
+
+	<Symbols>
+		<GuidSymbol name="guidCopyFolderTreePackage" value="{12c4bd1b-22eb-4dfc-a927-2a77cf453308}" />
+		<GuidSymbol name="guidCopyFolderTreePackageCmdSet" value="{8a3ac71f-a104-4589-9d37-a34c2c8e401d}">
+			<IDSymbol name="MyMenuGroup" value="0x1020" />
+			<IDSymbol name="CopyFolderOnlyCommandId" value="0x0100" />
+			<IDSymbol name="CopyFolderAndFileCommandId" value="0x0101" />
+		</GuidSymbol>
+		<GuidSymbol name="guidImages" value="{c18c8b12-73d5-4147-9412-c6d26f15e219}" >
+			<IDSymbol name="bmpPic1" value="1" />
+		</GuidSymbol>
+	</Symbols>
+</CommandTable>
