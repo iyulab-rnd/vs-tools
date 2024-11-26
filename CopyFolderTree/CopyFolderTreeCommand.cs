@@ -10,6 +10,7 @@ using EnvDTE;
 using EnvDTE80;
 using System.Windows.Forms;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace CopyFolderTree
 {
@@ -23,6 +24,7 @@ namespace CopyFolderTree
         private readonly DTE2 _dte;
         private readonly StringBuilder _treeBuilder;
         private readonly IVsStatusbar _statusBar;
+        private readonly List<ProjectItem> _currentPath;
         private bool _includingFiles;
 
         private CopyFolderTreeCommand(AsyncPackage package, DTE2 dte, IMenuCommandService commandService, IVsStatusbar statusBar)
@@ -31,6 +33,7 @@ namespace CopyFolderTree
             _dte = dte ?? throw new ArgumentNullException(nameof(dte));
             _statusBar = statusBar ?? throw new ArgumentNullException(nameof(statusBar));
             _treeBuilder = new StringBuilder();
+            _currentPath = new List<ProjectItem>();
 
             if (commandService != null)
             {
@@ -41,6 +44,8 @@ namespace CopyFolderTree
                 commandService.AddCommand(new MenuCommand((s, e) => Execute(s, e, true), folderAndFileCommandID));
             }
         }
+
+        public static CopyFolderTreeCommand Instance { get; private set; }
 
         public static async Task InitializeAsync(AsyncPackage package)
         {
@@ -55,8 +60,6 @@ namespace CopyFolderTree
             Instance = new CopyFolderTreeCommand(package, dte, commandService, statusBar);
         }
 
-        public static CopyFolderTreeCommand Instance { get; private set; }
-
         private void ShowStatusMessage(string message)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -69,6 +72,7 @@ namespace CopyFolderTree
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             _includingFiles = includeFiles;
+            _currentPath.Clear();
 
             try
             {
@@ -102,6 +106,10 @@ namespace CopyFolderTree
             {
                 ShowStatusMessage($"Error: {ex.Message}");
             }
+            finally
+            {
+                _currentPath.Clear();
+            }
         }
 
         private void ProcessProject(Project project, int depth, bool isLast, bool isRoot)
@@ -112,11 +120,10 @@ namespace CopyFolderTree
 
             if (project.ProjectItems != null)
             {
-                var items = project.ProjectItems.Cast<ProjectItem>().ToList();
-                if (!_includingFiles)
-                {
-                    items = items.Where(item => item.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder).ToList();
-                }
+                var items = project.ProjectItems.Cast<ProjectItem>()
+                    .Where(item => IsValidItem(item))
+                    .ToList();
+
                 for (int i = 0; i < items.Count; i++)
                 {
                     ProcessProjectItem(items[i], depth + 1, i == items.Count - 1, false);
@@ -130,17 +137,18 @@ namespace CopyFolderTree
 
             try
             {
+                _currentPath.Add(item);
+
                 if (item.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder)
                 {
                     AppendTreeLine(depth, isLast, "📁 " + item.Name, isRoot);
 
                     if (item.ProjectItems != null)
                     {
-                        var subItems = item.ProjectItems.Cast<ProjectItem>().ToList();
-                        if (!_includingFiles)
-                        {
-                            subItems = subItems.Where(subItem => subItem.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder).ToList();
-                        }
+                        var subItems = item.ProjectItems.Cast<ProjectItem>()
+                            .Where(subItem => IsValidItem(subItem))
+                            .ToList();
+
                         for (int i = 0; i < subItems.Count; i++)
                         {
                             ProcessProjectItem(subItems[i], depth + 1, i == subItems.Count - 1, false);
@@ -156,6 +164,57 @@ namespace CopyFolderTree
             {
                 // Skip items that can't be accessed
             }
+            finally
+            {
+                if (_currentPath.Count > 0)
+                {
+                    _currentPath.RemoveAt(_currentPath.Count - 1);
+                }
+            }
+        }
+
+        private bool IsValidItem(ProjectItem item)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            return item.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFolder ||
+                   (_includingFiles && item.Kind == EnvDTE.Constants.vsProjectItemKindPhysicalFile);
+        }
+
+        private List<ProjectItem> GetSiblingItems(ProjectItem parent)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (parent == null && _currentPath.Count > 0)
+            {
+                return _currentPath[0].Collection.Cast<ProjectItem>()
+                    .Where(item => IsValidItem(item))
+                    .ToList();
+            }
+
+            return parent?.ProjectItems?
+                .Cast<ProjectItem>()
+                .Where(item => IsValidItem(item))
+                .ToList() ?? new List<ProjectItem>();
+        }
+
+        private bool IsLastAtLevel(int level)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            try
+            {
+                if (level >= _currentPath.Count) return true;
+
+                var currentItem = _currentPath[level];
+                var parentItem = level > 0 ? _currentPath[level - 1] : null;
+
+                var siblings = GetSiblingItems(parentItem);
+                return siblings.IndexOf(currentItem) == siblings.Count - 1;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private void AppendTreeLine(int depth, bool isLast, string text, bool isRoot)
@@ -164,15 +223,14 @@ namespace CopyFolderTree
 
             if (isRoot)
             {
-                // 최상위 요소는 트리 라인 없이 바로 텍스트 추가
                 line.Append(text);
             }
             else
             {
-                // 하위 요소들은 트리 라인 포함
-                for (int i = 0; i < depth; i++)
+                for (int i = 0; i < depth - 1; i++)
                 {
-                    line.Append("│  ");
+                    bool showVerticalLine = !IsLastAtLevel(i);
+                    line.Append(showVerticalLine ? "│  " : "   ");
                 }
 
                 line.Append(isLast ? "└─" : "├─");

@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="CopyFolderTree.fc7e4a18-acb7-4e90-abca-b9bb2e363feb" Version="1.0" Language="en-US" Publisher="iyulab" />
+        <Identity Id="CopyFolderTree.fc7e4a18-acb7-4e90-abca-b9bb2e363feb" Version="1.2" Language="en-US" Publisher="iyulab" />
         <DisplayName>CopyFolderTree</DisplayName>
         <Description xml:space="preserve">You can save a folder tree to the clipboard based on a selection of folders in Solution Explorer.</Description>
         <Icon>account_tree.ico</Icon>
         <Tags>solution-explorer, folders, clipboard, directory-structure, file-system, tree-structure, visual-studio, productivity</Tags>
-        <Preview>true</Preview>
     </Metadata>
     <Installation>
         <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 18.0)">
