@@ -59,7 +59,7 @@ function processFile(filePath: string, basePath: string): FileProcessingResult |
 
 function formatContent(result: FileProcessingResult): string {
   const codeBlock = result.language === 'markdown' ? '``````' : '```';
-  return `### ${result.relativePath}\n\n${codeBlock}${result.language}\n${result.content}\n${codeBlock}\n\n`;
+  return `### \`${result.relativePath}\`\n\n${codeBlock}${result.language}\n${result.content}\n${codeBlock}\n\n`;
 }
 
 function getAllFilesRecursively(directoryPath: string): string[] {
@@ -83,13 +83,18 @@ function getAllFilesRecursively(directoryPath: string): string[] {
 
 async function processFileOrDirectory(uri: vscode.Uri): Promise<string> {
   try {
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+    if (!workspaceFolder) {
+      throw new Error('File is not in a workspace');
+    }
+
+    const basePath = workspaceFolder.uri.fsPath;
     const fileStats = fs.statSync(uri.fsPath);
     let content = '';
 
     if (fileStats.isDirectory()) {
       const allFiles = getAllFilesRecursively(uri.fsPath);
-      const basePath = uri.fsPath;
-
+      
       for (const filePath of allFiles) {
         const result = processFile(filePath, basePath);
         if (result) {
@@ -97,7 +102,7 @@ async function processFileOrDirectory(uri: vscode.Uri): Promise<string> {
         }
       }
     } else {
-      const result = processFile(uri.fsPath, path.dirname(uri.fsPath));
+      const result = processFile(uri.fsPath, basePath);
       if (result) {
         content += formatContent(result);
       }
